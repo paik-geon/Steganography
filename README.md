@@ -1,5 +1,21 @@
 # Steganography
 
+### hideapp.py
+hideapp.py는 사진을 지정하고 지정된 사진에 넣을 문자열을 받아 사진의 픽셀 RGB 값을 수정하여 스테가노그래피 값을 삽입하는 파일
+
+### reveal.py
+reveal.py는 hideapp.py에서 사진에 삽입한 정보를 불러와 사용자에게 확인시켜주는 파일
+
+### RGBvector.py
+RGBvector.py는 위에서 저장된 사진들의 RGB 값을 불러와 텍스트 파일로 재생성시키는 파일
+
+### contrast_rgb_values.py
+contrast_rgb_values.py는 RGBvector.py에서 생성된 텍스트 파일 2개를 비교, 대조하여 사용자에게 값을 제공하는 파일
+
+
+
+# 코드설명
+
 ## hideapp.py
 ```python
 from PIL import Image # 이미지 처리 기능을 제공하는 Pillow 라이브러리를 임포트합니다.
@@ -233,4 +249,153 @@ if __name__ == "__main__":
         print(f"추출된 메시지: {extracted_text}")
     else:
         print("메시지 추출에 실패했거나 숨겨진 메시지가 없습니다.")
+```
+## RGBvector.py
+```python
+from PIL import Image  # 이미지를 열고 처리하기 위해 PIL 라이브러리의 Image 모듈을 가져옵니다.
+import os              # 파일 경로와 관련된 기능을 위해 os 모듈을 불러옵니다.
+
+# 이미지의 모든 픽셀 RGB 값을 추출하여 텍스트 파일로 저장하는 함수
+def get_and_save_all_pixel_rgb(image_path, output_txt_path):
+    try:
+        # 이미지 파일 열기
+        img = Image.open(image_path)
+
+        # 이미지 모드가 RGB가 아니면 RGB로 변환 (예: RGBA → RGB)
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # 이미지의 가로(width)와 세로(height) 크기 가져오기
+        width, height = img.size
+
+        # 출력 텍스트 파일을 쓰기 모드로 열기
+        with open(output_txt_path, 'w') as f:
+            # 전체 픽셀 순회 (위에서 아래로, 왼쪽에서 오른쪽으로)
+            for y in range(height):
+                for x in range(width):
+                    r, g, b = img.getpixel((x, y))  # 해당 픽셀의 RGB 값 가져오기
+                    f.write(f"{r},{g},{b}\n")       # RGB 값을 쉼표로 구분해 텍스트 파일에 저장
+
+        # 완료 메시지 출력
+        print(f"성공: '{image_path}'의 모든 픽셀 RGB 값이 '{output_txt_path}'에 저장됨.")
+        print(f"총 {width * height}개의 픽셀이 저장됨.")  # 전체 픽셀 수 출력
+
+    except FileNotFoundError:
+        # 이미지 파일을 찾지 못한 경우의 에러 처리
+        print(f"오류: '{image_path}' 파일을 찾을 수 없음. 경로를 확인 필요.")
+    except Exception as e:
+        # 그 외 다른 예외 발생 시 출력
+        print(f"이미지 처리 중 오류 발생: {e}")
+
+# --- 프로그램 실행 부분 ---
+if __name__ == "__main__":
+    image_file = 'encrypted.png'  # 처리할 이미지 파일 경로
+    output_text_file = 'original_rgb_values.txt'  # RGB 값을 저장할 텍스트 파일 경로
+
+    # 함수 실행: 이미지의 픽셀 RGB 값을 추출하고 텍스트 파일로 저장
+    get_and_save_all_pixel_rgb(image_file, output_text_file)
+
+    # 생성된 텍스트 파일에서 처음 10줄을 출력해서 확인
+    print(f"\n'{output_text_file}' 파일의 처음 10줄 내용:")
+    try:
+        with open(output_text_file, 'r') as f:
+            for i, line in enumerate(f):
+                if i < 10:
+                    print(line.strip())  # 앞에서 10줄만 출력 (줄바꿈 제거)
+                else:
+                    break
+    except FileNotFoundError:
+        print("생성된 텍스트 파일을 찾을 수 없음.")
+    except Exception as e:
+        print(f"파일 읽기 중 오류 발생: {e}")
+```
+
+## contrast_rgb_values.py
+```python
+import os  # 파일 존재 여부를 확인하기 위해 os 모듈을 불러옵니다.
+
+# 두 RGB 텍스트 파일을 비교하는 함수 정의
+def compare_rgb_files(original_file_path, modified_file_path):
+    changed_pixels = 0      # 변경된 픽셀 수를 저장할 변수
+    total_pixels = 0        # 총 비교한 픽셀 수를 저장할 변수
+
+    # 원본 파일이 존재하는지 확인
+    if not os.path.exists(original_file_path):
+        print(f"오류: 원본 파일 '{original_file_path}'을 찾을 수 없음.")
+        return 0, 0
+
+    # 수정된 파일이 존재하는지 확인
+    if not os.path.exists(modified_file_path):
+        print(f"오류: 수정된 파일 '{modified_file_path}'을 찾을 수 없음.")
+        return 0, 0
+
+    try:
+        # 두 파일을 읽기 모드로 열기
+        with open(original_file_path, 'r') as original_f, \
+             open(modified_file_path, 'r') as modified_f:
+
+            # 두 파일의 각 줄을 하나씩 동시에 읽어서 비교
+            for original_line, modified_line in zip(original_f, modified_f):
+                total_pixels += 1  # 비교한 픽셀 수 증가
+
+                # 줄 끝의 줄바꿈 문자 제거
+                original_rgb_str = original_line.strip()
+                modified_rgb_str = modified_line.strip()
+
+                # RGB 문자열을 정수형 튜플로 변환 (예: '255,0,0' -> (255, 0, 0))
+                original_rgb = tuple(map(int, original_rgb_str.split(',')))
+                modified_rgb = tuple(map(int, modified_rgb_str.split(',')))
+
+                # RGB 값이 다르면 변경된 픽셀로 간주
+                if original_rgb != modified_rgb:
+                    changed_pixels += 1
+
+            # 파일을 다 읽고도 한쪽에 남은 줄이 있으면 경고 출력
+            if len(original_f.readlines()) != 0 or len(modified_f.readlines()) != 0:
+                print("경고: 두 파일의 픽셀 수가 다름. 정확한 비교가 어려울 수 있음.")
+
+    # RGB 값을 정수로 변환할 때 오류가 발생하면 메시지 출력
+    except ValueError as e:
+        print(f"오류: 파일 내용 중 RGB 형식이 올바르지 않음. {e}")
+        return 0, 0
+    # 그 외 다른 예외가 발생한 경우
+    except Exception as e:
+        print(f"파일 비교 중 오류 발생: {e}")
+        return 0, 0
+
+    # 변경된 픽셀 수와 전체 비교 픽셀 수 반환
+    return changed_pixels, total_pixels
+
+# 프로그램 실행 시작
+if __name__ == "__main__":
+    # 비교할 두 파일 경로 설정
+    original_rgb_file = 'original_rgb_values.txt' 
+    modified_rgb_file = 'encrypted_rgb_values.txt'
+
+    print(f"'{original_rgb_file}'와 '{modified_rgb_file}' 파일 비교 시작...")
+
+    # 비교 함수 호출
+    num_changed, num_total = compare_rgb_files(original_rgb_file, modified_rgb_file)
+
+    # 비교가 정상적으로 이루어졌다면 결과 출력
+    if num_total > 0:
+        percentage_changed = (num_changed / num_total) * 100  # 변경된 비율 계산
+
+        print(f"\n--- 비교 결과 ---")
+        print(f"총 픽셀 수: {num_total}")
+        print(f"변경되지 않은 픽셀 수: {num_total - num_changed}")
+        print(f"변경된 픽셀 수: {num_changed}")
+        print(f"전체 픽셀 중 변경된 픽셀 비율: {percentage_changed:.10f}%")
+
+        # 분석 결과에 따라 해석 메시지 출력
+        if percentage_changed == 0:
+            print("모든 픽셀이 일치함. 스테가노그래피가 적용되지 않았거나, 변경 사항을 감지할 수 없음.")
+        elif percentage_changed > 0 and percentage_changed < 100:
+            print("일부 픽셀이 변경되었음. 스테가노그래피 적용 결과일 수 있음.")
+        else:
+            print("모든 픽셀이 변경되었음. 예상치 못한 결과일 수 있음.")
+    else:
+        print("파일 비교를 완료할 수 없음.")
 ```
