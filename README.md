@@ -13,6 +13,8 @@ RGBvector.py는 위에서 저장된 사진들의 RGB 값을 불러와 텍스트 
 contrast_rgb_values.py는 RGBvector.py에서 생성된 텍스트 파일 2개를 비교, 대조하여 사용자에게 값을 제공하는 파일
 
 
+### *original_rgb_values.txt와 encrypted_rgb_valuse.txt는 파일 인코딩 이슈로 업로드 되어있지 않음.*
+
 
 # 코드설명
 
